@@ -1,35 +1,85 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+import { ZegoUIKitPrebuilt } from '@zegocloud/zego-uikit-prebuilt';
 
-  return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+function randomID(len) {
+  let result = '';
+  if (result) return result;
+  var chars = '12345qwertyuiopasdfgh67890jklmnbvcxzMNBVCZXASDQWERTYHGFUIOLKJP',
+    maxPos = chars.length,
+    i;
+  len = len || 5;
+  for (i = 0; i < len; i++) {
+    result += chars.charAt(Math.floor(Math.random() * maxPos));
+  }
+  return result;
 }
 
-export default App
+export function getUrlParams(
+  url = window.location.href
+) {
+  let urlStr = url.split('?')[1];
+  return new URLSearchParams(urlStr);
+}
+
+export default function Apps() {
+  const roomID = getUrlParams().get('roomID') || randomID(5);
+  let role_str = getUrlParams(window.location.href).get('role') || 'Host';
+  const role =
+    role_str === 'Host'
+      ? ZegoUIKitPrebuilt.Host
+      : role_str === 'Cohost'
+      ? ZegoUIKitPrebuilt.Cohost
+      : ZegoUIKitPrebuilt.Audience;
+
+  let sharedLinks = [];
+  if (role === ZegoUIKitPrebuilt.Host || role === ZegoUIKitPrebuilt.Cohost) {
+    sharedLinks.push({
+      name: 'Join as co-host',
+      url:
+        window.location.protocol + '//' + 
+        window.location.host + window.location.pathname +
+        '?roomID=' +
+        roomID +
+        '&role=Cohost',
+    });
+  }
+  sharedLinks.push({
+    name: 'Join as audience',
+    url:
+     window.location.protocol + '//' + 
+     window.location.host + window.location.pathname +
+      '?roomID=' +
+      roomID +
+      '&role=Audience',
+  });
+ // generate Kit Token
+  const appID = 1805612153;
+  const serverSecret = "2c896817e7eeb5280f80cae21223f1dc";
+  const kitToken =  ZegoUIKitPrebuilt.generateKitTokenForTest(appID, serverSecret, roomID,  randomID(5),  randomID(5));
+
+
+  // start the call
+  let myMeeting = async (element) => {
+      // Create instance object from Kit Token.
+      const zp = ZegoUIKitPrebuilt.create(kitToken);
+      // start the call
+      zp.joinRoom({
+        container: element,
+        scenario: {
+          mode: ZegoUIKitPrebuilt.LiveStreaming,
+          config: {
+            role,
+          },
+        },
+        sharedLinks,
+      });
+  };
+
+  return (
+    <div
+      className="myCallContainer"
+      ref={myMeeting}
+      style={{ width: '100vw', height: '100vh' }}
+    ></div>
+  );
+}
